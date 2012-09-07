@@ -11,14 +11,16 @@ module Komrade
     end
 
     def self.put(user_id, name, payload)
-      entity = entity(user_id, name)
-      DB[:jobs].returning(:resource_id).insert(entity: entity, payload: JSON.dump(payload)).pop[:resource_id]
+      d = {entity: entity(user_id, name), payload: JSON.dump(payload))}
+      r = DB[:jobs].returning(:resource_id).insert(d)
+      {"job-id" => r[0][:resource_id]}
     end
 
     def self.get(user_id, name)
-      entity = entity(user_id, name)
-      DB[:jobs].where(entity: entity).first.values_at(:resource_id, :payload)
-#     DB[:jobs].returning(:resource_id, :payload).where(entity: entity).limit(1).delete
+      DB[:jobs].where(entity: entity(user_id, name)).map do |r|
+        {"job-id" => r[:resource_id], "payload" => r[:payload]}
+      end
     end
+
   end
 end

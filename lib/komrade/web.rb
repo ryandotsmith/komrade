@@ -11,6 +11,11 @@ module Komrade
     extend Press
     include Authentication
 
+    def self.route(verb, action, *)
+      condition {@instrument_action = action}
+      super
+    end
+
     helpers do
       def data
         @data ||= JSON.parse(request.body.read) rescue {}
@@ -20,30 +25,27 @@ module Komrade
     before do
       authenticate_user
       content_type :json
+      @start_req = Time.now
+    end
+
+    after do
+      pdfm __FILE__, @instrument_action, elapsed: Time.now = @start_req
     end
 
     post "/queue" do
-      self.class.pdfm __FILE__, __method__
-      job_id = Job.put(session[:user_id], "default", data['payload'])
-      [200, JSON.dump("job-id" => job_id)]
+      [201, JSON.dump(Job.put(session[:user_id], "default", data['payload']))]
     end
 
     post "/queue/:name" do |name|
-      self.class.pdfm __FILE__, __method__, name: name
-      job_id = Job.put(session[:user_id], name, data['payload'])
-      [200, JSON.dump("job-id" => job_id)]
+      [201, JSON.dump(Job.put(session[:user_id], name, data['payload']))]
     end
 
     get "/queue" do
-      self.class.pdfm __FILE__, __method__
-      job_id, payload = Job.get(session[:user_id], "default")
-      [200, JSON.dump("job-id" => job_id, "payload" => payload)]
+      [200, JSON.dump(Job.get(session[:user_id], "default"))]
     end
 
     get "/queue/:name" do |name|
-      self.class.pdfm __FILE__, __method__, name: name
-      job_id, payload = Job.get(session[:user_id], name)
-      [200, JSON.dump("job-id" => job_id, "payload" => payload)]
+      [200, JSON.dump(Job.get(session[:user_id], name))]
     end
 
     def self.run
