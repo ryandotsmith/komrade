@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+$:.unshift(File.expand_path(File.join(Dir.getwd, "lib")))
+
+require "komrade/web"
+
+Komrade::Web.run
