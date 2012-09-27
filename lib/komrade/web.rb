@@ -2,6 +2,7 @@ require "json"
 require "press"
 require "sinatra/base"
 require "rack/handler/mongrel"
+
 require "komrade/conf"
 require "komrade/authentication"
 require "komrade/job"
@@ -29,7 +30,7 @@ module Komrade
     end
 
     after do
-      pdfm __FILE__, @instrument_action, elapsed: Time.now = @start_req
+      pdfm __FILE__, @instrument_action, elapsed: Time.now - @start_req
     end
 
     post "/queue" do
