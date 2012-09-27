@@ -10,10 +10,6 @@ module Komrade
 
     DB = Sequel.connect(Conf.database_url)
 
-    def key(*things)
-      Zlib.crc32(things.join)
-    end
-
     def put(user_id, name, payload)
       d = {entity: key(user_id, name), payload: JSON.dump(payload))}
       r = DB[:jobs].returning(:resource_id).insert(d)
@@ -24,6 +20,12 @@ module Komrade
       DB[:jobs].where(entity: key(user_id, name)).map do |r|
         {"job-id" => r[:resource_id], "payload" => r[:payload]}
       end
+    end
+
+    private
+
+    def key(*things)
+      Zlib.crc32(things.join)
     end
 
   end
