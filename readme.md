@@ -1,40 +1,32 @@
-# Comrade
+# Komrade
 
-HTTP based queueing service
+HTTP based queueing service.
 
-* take jobs
-* deliver jobs
+* PUT jobs
+* GET jobs
+* DELETE jobs
 
-
-## Take Jobs
-
-```
-Request Line: POST /queue
-Request Body: {"payload": {}}
-Response Body: {"job-id": uuid, "request-id": uuid}
-```
-
-Optional queue name
+## PUT Job
 
 ```
-Request Line: POST /queue/:name
-Request Body: {"payload": {}}
-Response Body: {"job-id": uuid, "request-id": uuid}
+> PUT /jobs/:id
+> Authorization: b64
+> {"payload": {}}
+< {"job-id": id, "request-id": uuid}
 ```
 
-## Get Jobs
+## GET Jobs
 
 ```
-Request Line: GET /queue/jobs
-Request Body: {}
-Response Body: {"job-id": uuid, "request-id": uuid, "payload": {}}
+> GET /jobs?limit=1
+> Authorization: b64
+< [{"job-id": id, "request-id": uuid, "payload": {}}]
 ```
 
-Optional queue name
-
+## DELETE Job
 
 ```
-Request Line: GET /queue/:name/jobs
-Request Body: {}
-Response Body: {"job-id": uuid, "request-id": uuid, "payload": {}}
+> DELETE /jobs/:id
+> Authorization: b64
+< [{"job-id": id, "request-id": uuid, "payload": {}}]
 ```
