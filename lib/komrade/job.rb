@@ -11,7 +11,7 @@ module Komrade
     DB = Sequel.connect(Conf.database_url)
 
     def put(user_id, name, payload)
-      d = {entity: key(user_id, name), payload: JSON.dump(payload))}
+      d = {entity: key(user_id, name), payload: JSON.dump(payload)}
       r = DB[:jobs].returning(:resource_id).insert(d)
       {"job-id" => r[0][:resource_id]}
     end
