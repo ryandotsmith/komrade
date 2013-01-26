@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"komrade/store"
@@ -14,12 +15,17 @@ import (
 )
 
 var (
+	port   = flag.String("port", "8000", "Port for http server to bind.")
 	jobPat = regexp.MustCompile(`\A\/jobs(\/(.*))?$`)
 )
 
+func init() {
+	flag.Parse()
+}
+
 func main() {
 	http.HandleFunc("/", router)
-	err := http.ListenAndServe(":8000", nil)
+	err := http.ListenAndServe(":"+*port, nil)
 	if err != nil {
 		fmt.Printf("at=error error=\"Unable to start http server.\"\n")
 		os.Exit(1)
