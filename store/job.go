@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/bmizerany/pq"
 	"os"
+	"time"
 )
 
 var (
@@ -27,9 +28,11 @@ func init() {
 }
 
 type Job struct {
-	Id      string                 `json:"id"`
-	QueueId string                 `json:",omitempty"`
-	Payload map[string]interface{} `json:"payload"`
+	Id        string                 `json:"id"`
+	QueueId   string                 `json:",omitempty"`
+	CreatedAt time.Time              `json:"created_at"`
+	LockedAt  time.Time              `json:"locked_at"`
+	Payload   map[string]interface{} `json:"payload"`
 }
 
 func GetJobs(queueId, limit string) ([]*Job, error) {
@@ -40,7 +43,7 @@ func GetJobs(queueId, limit string) ([]*Job, error) {
 	}
 	defer pg.Close()
 
-	s := "select id, payload from jobs where queue = $1 limit $2"
+	s := "select id, created_at, locked_at, payload from lock_jobs($1,$2)"
 	rows, err := pg.Query(s, queueId, limit)
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
@@ -51,7 +54,7 @@ func GetJobs(queueId, limit string) ([]*Job, error) {
 	for rows.Next() {
 		j := new(Job)
 		var tmp []byte
-		err := rows.Scan(&j.Id, &tmp)
+		err := rows.Scan(&j.Id, &j.CreatedAt, &j.LockedAt, &tmp)
 		if err != nil {
 			fmt.Printf("at=error error=%s\n", err)
 			continue
