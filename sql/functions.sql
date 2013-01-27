@@ -77,3 +77,36 @@ set
 	error_day = (error_day + 1)
 where token = $1
 $$ language sql;
+
+drop function if exists reset_minute_counters();
+create function reset_minute_counters()
+returns void
+as $$
+update queues
+set
+	in_minute = 0,
+	out_minute = 0,
+	error_minute = 0
+$$ language sql;
+
+drop function if exists reset_hour_counters();
+create function reset_hour_counters()
+returns void
+as $$
+update queues
+set
+	in_hour = 0,
+	out_hour = 0,
+	error_hour = 0
+$$ language sql;
+
+drop function if exists reset_day_counters();
+create function reset_day_counters()
+returns void
+as $$
+update queues
+set
+	in_day = 0,
+	out_day = 0,
+	error_day = 0
+$$ language sql;
