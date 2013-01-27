@@ -173,6 +173,12 @@ func handleGetJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDeleteJob(w http.ResponseWriter, r *http.Request) {
+	token, err := ParseToken(r)
+	if err != nil {
+		writeJsonErr(w, 401, err)
+		return
+	}
+
 	matches := jobPat.FindStringSubmatch(r.URL.Path)
 	if len(matches) < 2 || len(matches[1]) == 0 {
 		writeJsonErr(w, 400, errors.New("Job id not found."))
@@ -184,7 +190,7 @@ func handleDeleteJob(w http.ResponseWriter, r *http.Request) {
 		writeJsonErr(w, 400, errors.New("Job id not found."))
 		return
 	}
-	job := store.Job{Id: id}
+	job := store.Job{Id: id, QueueId: token}
 	if err := job.Delete(); err != nil {
 		writeJsonErr(w, 400, err)
 		return
