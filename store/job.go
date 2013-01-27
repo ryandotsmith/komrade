@@ -128,12 +128,24 @@ func (j *Job) Delete() error {
 		return err
 	}
 
+	_, err = txn.Exec("select * from update_out_counter($1)", j.QueueId)
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
+
 	s := "delete from jobs where id = $1 returning payload"
 	rows, err := txn.Query(s, j.Id)
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
+	err = txn.Commit()
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
+
 	fmt.Printf("measure=jobs.delete id=%s\n", j.Id)
 	defer rows.Close()
 	rows.Next()
@@ -142,18 +154,6 @@ func (j *Job) Delete() error {
 		return err
 	}
 	if err = json.Unmarshal(tmp, &j.Payload); err != nil {
-		return err
-	}
-
-	_, err = txn.Exec("select * from update_out_counter($1)", j.QueueId)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return err
-	}
-
-	err = txn.Commit()
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 
