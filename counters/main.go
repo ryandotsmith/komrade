@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	for t := range time.Tick(time.Millisecond * 500) {
+	for t := range time.Tick(time.Second) {
 		pg, err := sql.Open("postgres", pgurl)
 		if err != nil {
 			fmt.Printf("at=error error=%s\n", err)
