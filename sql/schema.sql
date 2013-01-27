@@ -5,7 +5,8 @@ create table queues (
 	heroku_id text,
 	plan text,
 	callback_url text,
-	failed_count int default 0
+	failed_count int default 0,
+	job_count int default 0
 );
 
 create table jobs (

@@ -86,13 +86,34 @@ func (j *Job) Insert() error {
 		return err
 	}
 
+	txn, err := pg.Begin()
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
+
 	s := "insert into jobs (queue, id, payload) values ($1,$2,$3)"
-	_, err = pg.Exec(s, j.QueueId, j.Id, string(payload))
+	_, err = txn.Exec(s, j.QueueId, j.Id, string(payload))
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 	fmt.Printf("measure=jobs.insert id=%s\n", j.Id)
+
+	// Count number of jobs passing through the queue.
+	s = "update queues set job_count = job_count + 1 "
+	s += "where token = $1"
+	_, err = txn.Exec(s, j.QueueId)
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
+
+	err = txn.Commit()
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
 	return nil
 }
 
