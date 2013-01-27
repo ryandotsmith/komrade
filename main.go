@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	port   = flag.String("port", "8000", "Port for http server to bind.")
-	jobPat = regexp.MustCompile(`\A\/jobs(\/(.*))?$`)
+	port    = flag.String("port", "8000", "Port for http server to bind.")
+	failPat = regexp.MustCompile(`\A\/jobs\/(.*)\/failures\/(.*)$`)
+	jobPat  = regexp.MustCompile(`\A\/jobs(\/(.*))?$`)
 )
 
 func init() {
@@ -33,6 +34,12 @@ func main() {
 }
 
 func router(w http.ResponseWriter, r *http.Request) {
+	if failPat.MatchString(r.URL.Path) {
+		if r.Method == "PUT" {
+			handleFailedJob(w, r)
+			return
+		}
+	}
 	if jobPat.MatchString(r.URL.Path) {
 		switch r.Method {
 		case "PUT":
@@ -47,6 +54,56 @@ func router(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.NotFound(w, r)
+}
+
+func handleFailedJob(w http.ResponseWriter, r *http.Request) {
+	token, err := ParseToken(r)
+	if err != nil {
+		writeJsonErr(w, 401, err)
+		return
+	}
+
+	matches := failPat.FindStringSubmatch(r.URL.Path)
+	if len(matches) < 3 {
+		writeJsonErr(w, 400, errors.New("Missing job id or failured id."))
+		return
+	}
+	jid := string(matches[1])
+	fid := string(matches[2])
+	if len(jid) == 0 {
+		writeJsonErr(w, 400, errors.New("Job id not found."))
+		return
+	}
+	if len(fid) == 0 {
+		writeJsonErr(w, 400, errors.New("Failure id not found."))
+		return
+	}
+
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		writeJsonErr(w, 500, err)
+		return
+	}
+
+	f := store.FailedJob{Id: fid, JobId: jid, QueueId: token}
+
+	if ok := f.Get(); ok {
+		WriteJson(w, 200, f)
+		return
+	}
+
+	err = json.Unmarshal(b, &f.Payload)
+	if err != nil {
+		writeJsonErr(w, 400, err)
+		return
+	}
+
+	err = f.Insert()
+	if err != nil {
+		writeJsonErr(w, 500, err)
+		return
+	}
+	WriteJson(w, 201, f)
 }
 
 func handleNewJob(w http.ResponseWriter, r *http.Request) {
