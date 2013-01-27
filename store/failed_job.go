@@ -76,6 +76,14 @@ func (f *FailedJob) Insert() error {
 		return err
 	}
 
+	s = "update queues set failed_count = (failed_count + 1) "
+	s += "where token = $1"
+	_, err = txn.Exec(s, f.QueueId)
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
+
 	err = txn.Commit()
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
