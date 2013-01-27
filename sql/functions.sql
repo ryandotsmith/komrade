@@ -46,41 +46,34 @@ drop function if exists update_in_counter(uuid);
 create function update_in_counter(uuid)
 returns void
 as $$
-update
-	queues
+update queues
 set
 	in_minute = (in_minute + 1),
 	in_hour = (in_hour + 1),
 	in_day = (in_day + 1)
-where
-	token = $1
+where token = $1
 $$ language sql;
-
 
 drop function if exists update_out_counter(uuid);
 create function update_out_counter(uuid)
 returns void
 as $$
-update
-	queues
+update queues
 set
 	out_minute = (out_minute + 1),
 	out_hour = (out_hour + 1),
 	out_day = (out_day + 1)
-where
-	token = $1
+where token = $1
 $$ language sql;
 
 drop function if exists update_error_counter(uuid);
 create function update_error_counter(uuid)
 returns void
 as $$
-update
-	queues
+update queues
 set
 	error_minute = (error_minute + 1),
 	error_hour = (error_hour + 1),
 	error_day = (error_day + 1)
-where
-	token = $1
+where token = $1
 $$ language sql;

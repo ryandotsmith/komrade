@@ -93,24 +93,27 @@ func (j *Job) Insert() error {
 	}
 
 	s := "insert into jobs (queue, id, payload) values ($1,$2,$3)"
-	_, err = txn.Exec(s, j.QueueId, j.Id, string(payload))
+	rows, err := txn.Query(s, j.QueueId, j.Id, string(payload))
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 	fmt.Printf("measure=jobs.insert id=%s\n", j.Id)
+	rows.Close()
 
-	_, err = txn.Exec("select * from update_in_counter($1)", j.QueueId)
+	rows, err = txn.Query("select update_in_counter($1)", j.QueueId)
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
+	rows.Close()
 
 	err = txn.Commit()
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
+
 	return nil
 }
 
@@ -128,12 +131,6 @@ func (j *Job) Delete() error {
 		return err
 	}
 
-	_, err = txn.Exec("select * from update_out_counter($1)", j.QueueId)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return err
-	}
-
 	s := "delete from jobs where id = $1 returning payload"
 	rows, err := txn.Query(s, j.Id)
 	if err != nil {
@@ -142,7 +139,6 @@ func (j *Job) Delete() error {
 	}
 
 	fmt.Printf("measure=jobs.delete id=%s\n", j.Id)
-	defer rows.Close()
 	rows.Next()
 	var tmp []byte
 	if err = rows.Scan(&tmp); err != nil {
@@ -151,12 +147,19 @@ func (j *Job) Delete() error {
 	if err = json.Unmarshal(tmp, &j.Payload); err != nil {
 		return err
 	}
+	rows.Close()
+
+	rows, err = txn.Query("select update_out_counter($1)", j.QueueId)
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
+	rows.Close()
 
 	err = txn.Commit()
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
-
 	return nil
 }

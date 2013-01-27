@@ -70,17 +70,19 @@ func (f *FailedJob) Insert() error {
 	// Also, this job should be available for work again.
 	s = "update jobs set failed_count = (failed_count + 1), locked_at = null "
 	s += "where jobs.id = $1"
-	_, err = txn.Exec(s, f.JobId)
+	rows, err := txn.Query(s, f.JobId)
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
+	rows.Close()
 
-	_, err = txn.Exec("select * from update_error_counter($1)", f.QueueId)
+	rows, err = txn.Query("select update_error_counter($1)", f.QueueId)
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
+	rows.Close()
 
 	err = txn.Commit()
 	if err != nil {
