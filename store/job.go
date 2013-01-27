@@ -100,10 +100,7 @@ func (j *Job) Insert() error {
 	}
 	fmt.Printf("measure=jobs.insert id=%s\n", j.Id)
 
-	// Count number of jobs passing through the queue.
-	s = "update queues set job_count = job_count + 1 "
-	s += "where token = $1"
-	_, err = txn.Exec(s, j.QueueId)
+	txn.Exec("select * from update_in_counter($1)", j.QueueId)
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
@@ -124,8 +121,15 @@ func (j *Job) Delete() error {
 		return err
 	}
 	defer pg.Close()
+
+	txn, err := pg.Begin()
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
+
 	s := "delete from jobs where id = $1 returning payload"
-	rows, err := pg.Query(s, j.Id)
+	rows, err := txn.Query(s, j.Id)
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
@@ -140,5 +144,18 @@ func (j *Job) Delete() error {
 	if err = json.Unmarshal(tmp, &j.Payload); err != nil {
 		return err
 	}
+
+	_, err = txn.Exec("select * from update_out_counter($1)", j.QueueId)
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
+
+	err = txn.Commit()
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
+
 	return nil
 }

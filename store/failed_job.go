@@ -76,9 +76,7 @@ func (f *FailedJob) Insert() error {
 		return err
 	}
 
-	s = "update queues set failed_count = (failed_count + 1) "
-	s += "where token = $1"
-	_, err = txn.Exec(s, f.QueueId)
+	_, err = txn.Exec("select * from update_error_counter($1)", f.QueueId)
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
 		return err
