@@ -117,6 +117,27 @@ func (j *Job) Insert() error {
 	return nil
 }
 
+func (j *Job) HeartBeat() error {
+	defer fmt.Printf("measure=jobs.heartbeat id=%s\n", j.Id)
+
+	pg, err := sql.Open("postgres", pgurl)
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return err
+	}
+	defer pg.Close()
+
+	s := "update jobs set "
+	s += "heartbeat = now(), "
+	s += "heartbeat_count = heartbeat_count + 1 "
+	s += "where id = $1 and queue = $2"
+	_, err = pg.Exec(s, j.Id, j.QueueId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (j *Job) Delete() error {
 	pg, err := sql.Open("postgres", pgurl)
 	if err != nil {

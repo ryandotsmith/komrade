@@ -15,9 +15,10 @@ import (
 )
 
 var (
-	port    = flag.String("port", "8000", "Port for http server to bind.")
-	failPat = regexp.MustCompile(`\A\/jobs\/(.*)\/failures\/(.*)$`)
-	jobPat  = regexp.MustCompile(`\A\/jobs(\/(.*))?$`)
+	port     = flag.String("port", "8000", "Port for http server to bind.")
+	heartPat = regexp.MustCompile(`\A\/jobs\/(.*)\/heartbeats$`)
+	failPat  = regexp.MustCompile(`\A\/jobs\/(.*)\/failures\/(.*)$`)
+	jobPat   = regexp.MustCompile(`\A\/jobs(\/(.*))?$`)
 )
 
 func init() {
@@ -34,6 +35,12 @@ func main() {
 }
 
 func router(w http.ResponseWriter, r *http.Request) {
+	if heartPat.MatchString(r.URL.Path) {
+		if r.Method == "POST" {
+			handleHeartBeat(w, r)
+			return
+		}
+	}
 	if failPat.MatchString(r.URL.Path) {
 		if r.Method == "PUT" {
 			handleFailedJob(w, r)
@@ -54,6 +61,33 @@ func router(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.NotFound(w, r)
+}
+
+func handleHeartBeat(w http.ResponseWriter, r *http.Request) {
+	token, err := ParseToken(r)
+	if err != nil {
+		writeJsonErr(w, 401, err)
+		return
+	}
+
+	matches := heartPat.FindStringSubmatch(r.URL.Path)
+	if len(matches) != 2 {
+		writeJsonErr(w, 400, errors.New("Missing job id or failured id."))
+		return
+	}
+	id := string(matches[1])
+	if len(id) == 0 {
+		writeJsonErr(w, 400, errors.New("Job id not found."))
+		return
+	}
+
+	job := store.Job{Id: id, QueueId: token}
+	err = job.HeartBeat()
+	if err != nil {
+		writeJsonErr(w, 500, errors.New("Unable to commit heartbeat."))
+		return
+	}
+	WriteJson(w, 201, map[string]string{"message": "OK"})
 }
 
 func handleFailedJob(w http.ResponseWriter, r *http.Request) {

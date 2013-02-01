@@ -22,6 +22,8 @@ create table jobs (
 	payload json,
 	created_at timestamptz default now(),
 	locked_at timestamptz,
+	heartbeat timestamptz,
+	heartbeat_count int default 0,
 	failed_count int default 0
 );
 
