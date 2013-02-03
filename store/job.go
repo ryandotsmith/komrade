@@ -49,6 +49,7 @@ func GetJobs(queueId, limit string) ([]*Job, error) {
 			fmt.Printf("at=error error=%s\n", err)
 			continue
 		}
+		go Record(dequeueEvent, j.QueueId, j.Id)
 		jobs = append(jobs, j)
 	}
 	return jobs, nil
@@ -78,30 +79,14 @@ func (j *Job) Insert() error {
 		return err
 	}
 
-	txn, err := pg.Begin()
-	if err != nil {
-		return err
-	}
-
 	s := "insert into jobs (queue, id, payload) values ($1,$2,$3)"
-	rows, err := txn.Query(s, j.QueueId, j.Id, string(payload))
+	_, err = pg.Exec(s, j.QueueId, j.Id, string(payload))
 	if err != nil {
 		return err
 	}
-	rows.Close()
+
 	fmt.Printf("measure=jobs.insert id=%s\n", j.Id)
-
-	rows, err = txn.Query("select update_in_counter($1)", j.QueueId)
-	if err != nil {
-		return err
-	}
-	rows.Close()
-
-	err = txn.Commit()
-	if err != nil {
-		return err
-	}
-
+	go Record(enqueueEvent, j.QueueId, j.Id)
 	return nil
 }
 
@@ -119,14 +104,8 @@ func (j *Job) HeartBeat() error {
 }
 
 func (j *Job) Delete() error {
-	txn, err := pg.Begin()
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return err
-	}
-
 	s := "delete from jobs where id = $1 returning payload"
-	rows, err := txn.Query(s, j.Id)
+	rows, err := pg.Query(s, j.Id)
 	if err != nil {
 		return err
 	}
@@ -151,16 +130,6 @@ func (j *Job) Delete() error {
 		return err
 	}
 
-	rows, err = txn.Query("select update_out_counter($1)", j.QueueId)
-	if err != nil {
-		return err
-	}
-	// Have to use Query but we don't care about the result.
-	rows.Close()
-
-	err = txn.Commit()
-	if err != nil {
-		return err
-	}
+	go Record(deleteEvent, j.QueueId, j.Id)
 	return nil
 }
