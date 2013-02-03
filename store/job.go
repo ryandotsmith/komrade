@@ -1,7 +1,6 @@
 package store
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -16,12 +15,6 @@ type Job struct {
 }
 
 func DeleteAllJobs(queueId string) (int64, error) {
-	pg, err := sql.Open("postgres", pgurl)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return 0, err
-	}
-	defer pg.Close()
 	s := "delete from jobs where queue = $1"
 	res, err := pg.Exec(s, queueId)
 	if err != nil {
@@ -36,17 +29,9 @@ func DeleteAllJobs(queueId string) (int64, error) {
 }
 
 func GetJobs(queueId, limit string) ([]*Job, error) {
-	pg, err := sql.Open("postgres", pgurl)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return nil, err
-	}
-	defer pg.Close()
-
 	s := "select id, created_at, locked_at, payload from lock_jobs($1,$2)"
 	rows, err := pg.Query(s, queueId, limit)
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -70,12 +55,6 @@ func GetJobs(queueId, limit string) ([]*Job, error) {
 }
 
 func (j *Job) Get() bool {
-	pg, err := sql.Open("postgres", pgurl)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return false
-	}
-	defer pg.Close()
 	s := "select payload from jobs where id = $1"
 	rows, err := pg.Query(s, j.Id)
 	if err != nil {
@@ -94,13 +73,6 @@ func (j *Job) Get() bool {
 }
 
 func (j *Job) Insert() error {
-	pg, err := sql.Open("postgres", pgurl)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return err
-	}
-	defer pg.Close()
-
 	payload, err := json.Marshal(j.Payload)
 	if err != nil {
 		return err
@@ -108,29 +80,25 @@ func (j *Job) Insert() error {
 
 	txn, err := pg.Begin()
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 
 	s := "insert into jobs (queue, id, payload) values ($1,$2,$3)"
 	rows, err := txn.Query(s, j.QueueId, j.Id, string(payload))
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
-	fmt.Printf("measure=jobs.insert id=%s\n", j.Id)
 	rows.Close()
+	fmt.Printf("measure=jobs.insert id=%s\n", j.Id)
 
 	rows, err = txn.Query("select update_in_counter($1)", j.QueueId)
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 	rows.Close()
 
 	err = txn.Commit()
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 
@@ -139,19 +107,11 @@ func (j *Job) Insert() error {
 
 func (j *Job) HeartBeat() error {
 	defer fmt.Printf("measure=jobs.heartbeat id=%s\n", j.Id)
-
-	pg, err := sql.Open("postgres", pgurl)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return err
-	}
-	defer pg.Close()
-
 	s := "update jobs set "
 	s += "heartbeat = now(), "
 	s += "heartbeat_count = heartbeat_count + 1 "
 	s += "where id = $1 and queue = $2"
-	_, err = pg.Exec(s, j.Id, j.QueueId)
+	_, err := pg.Exec(s, j.Id, j.QueueId)
 	if err != nil {
 		return err
 	}
@@ -159,13 +119,6 @@ func (j *Job) HeartBeat() error {
 }
 
 func (j *Job) Delete() error {
-	pg, err := sql.Open("postgres", pgurl)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return err
-	}
-	defer pg.Close()
-
 	txn, err := pg.Begin()
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
@@ -175,33 +128,38 @@ func (j *Job) Delete() error {
 	s := "delete from jobs where id = $1 returning payload"
 	rows, err := txn.Query(s, j.Id)
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 
 	fmt.Printf("measure=jobs.delete id=%s\n", j.Id)
-	rows.Next()
+	// If we weren't able to delete the job, it must already have been deleted.
+	present := rows.Next()
+	if !present {
+		rows.Close()
+		return nil
+	}
+
 	var tmp []byte
 	if err = rows.Scan(&tmp); err != nil {
 		rows.Close()
 		return err
 	}
+	// We are no done with the result of the delete.
+	rows.Close()
+
 	if err = json.Unmarshal(tmp, &j.Payload); err != nil {
-		rows.Close()
 		return err
 	}
-	rows.Close()
 
 	rows, err = txn.Query("select update_out_counter($1)", j.QueueId)
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
+	// Have to use Query but we don't care about the result.
 	rows.Close()
 
 	err = txn.Commit()
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 	return nil

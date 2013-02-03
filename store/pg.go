@@ -1,13 +1,14 @@
 package store
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/bmizerany/pq"
 	"os"
 )
 
 var (
-	pgurl string
+	pg *sql.DB
 )
 
 func init() {
@@ -17,9 +18,16 @@ func init() {
 		fmt.Printf("at=error error=\"must set DATABASE_URL\"\n")
 		os.Exit(1)
 	}
-	pgurl, err = pq.ParseURL(url)
+
+	pgurl, err := pq.ParseURL(url)
 	if err != nil {
 		fmt.Printf("at=error error=\"unable to parse DATABASE_URL\"\n")
+		os.Exit(1)
+	}
+
+	pg, err = sql.Open("postgres", pgurl)
+	if err != nil {
+		fmt.Printf("error=%s\n", err)
 		os.Exit(1)
 	}
 }

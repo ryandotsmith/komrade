@@ -1,7 +1,6 @@
 package store
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 )
@@ -14,13 +13,6 @@ type FailedJob struct {
 }
 
 func (f *FailedJob) Get() bool {
-	pg, err := sql.Open("postgres", pgurl)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return false
-	}
-	defer pg.Close()
-
 	s := "select payload from failed_jobs where id = $1"
 	rows, err := pg.Query(s, f.Id)
 	if err != nil {
@@ -39,13 +31,6 @@ func (f *FailedJob) Get() bool {
 }
 
 func (f *FailedJob) Insert() error {
-	pg, err := sql.Open("postgres", pgurl)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return err
-	}
-	defer pg.Close()
-
 	txn, err := pg.Begin()
 	if err != nil {
 		fmt.Printf("at=error error=%s\n", err)
