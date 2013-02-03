@@ -15,6 +15,26 @@ type Job struct {
 	Payload   map[string]interface{} `json:"payload"`
 }
 
+func DeleteAllJobs(queueId string) (int64, error) {
+	pg, err := sql.Open("postgres", pgurl)
+	if err != nil {
+		fmt.Printf("at=error error=%s\n", err)
+		return 0, err
+	}
+	defer pg.Close()
+	s := "delete from jobs where queue = $1"
+	res, err := pg.Exec(s, queueId)
+	if err != nil {
+		return 0, err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	fmt.Printf("measure=%q val=%d\n", "jobs.delelte-all", count)
+	return count, nil
+}
+
 func GetJobs(queueId, limit string) ([]*Job, error) {
 	pg, err := sql.Open("postgres", pgurl)
 	if err != nil {

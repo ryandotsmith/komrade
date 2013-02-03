@@ -15,10 +15,11 @@ import (
 )
 
 var (
-	port     = flag.String("port", "8000", "Port for http server to bind.")
-	heartPat = regexp.MustCompile(`\A\/jobs\/(.*)\/heartbeats$`)
-	failPat  = regexp.MustCompile(`\A\/jobs\/(.*)\/failures\/(.*)$`)
-	jobPat   = regexp.MustCompile(`\A\/jobs(\/(.*))?$`)
+	port      = flag.String("port", "8000", "Port for http server to bind.")
+	heartPat  = regexp.MustCompile(`\A\/jobs\/(.*)\/heartbeats$`)
+	failPat   = regexp.MustCompile(`\A\/jobs\/(.*)\/failures\/(.*)$`)
+	jobPat    = regexp.MustCompile(`\A\/jobs(\/(.*))?$`)
+	delAllPat = regexp.MustCompile(`\A\/delete-all-jobs$`)
 )
 
 func init() {
@@ -35,6 +36,12 @@ func main() {
 }
 
 func router(w http.ResponseWriter, r *http.Request) {
+	if delAllPat.MatchString(r.URL.Path) {
+		if r.Method == "POST" {
+			handleDeleteAll(w, r)
+			return
+		}
+	}
 	if heartPat.MatchString(r.URL.Path) {
 		if r.Method == "POST" {
 			handleHeartBeat(w, r)
@@ -88,6 +95,21 @@ func handleHeartBeat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	WriteJson(w, 201, map[string]string{"message": "OK"})
+}
+
+func handleDeleteAll(w http.ResponseWriter, r *http.Request) {
+	token, err := ParseToken(r)
+	if err != nil {
+		writeJsonErr(w, 401, err)
+		return
+	}
+
+	jobCount, err := store.DeleteAllJobs(token)
+	if err != nil {
+		writeJsonErr(w, 500, err)
+	}
+
+	WriteJson(w, 200, map[string]int64{"deleted": jobCount})
 }
 
 func handleFailedJob(w http.ResponseWriter, r *http.Request) {
