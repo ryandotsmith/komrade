@@ -183,9 +183,11 @@ func (j *Job) Delete() error {
 	rows.Next()
 	var tmp []byte
 	if err = rows.Scan(&tmp); err != nil {
+		rows.Close()
 		return err
 	}
 	if err = json.Unmarshal(tmp, &j.Payload); err != nil {
+		rows.Close()
 		return err
 	}
 	rows.Close()
