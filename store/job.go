@@ -49,7 +49,7 @@ func GetJobs(queueId, limit string) ([]*Job, error) {
 			fmt.Printf("at=error error=%s\n", err)
 			continue
 		}
-		go Record(dequeueEvent, j.QueueId, j.Id)
+		go Record(dequeueEvent, queueId, "")
 		jobs = append(jobs, j)
 	}
 	return jobs, nil
