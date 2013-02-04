@@ -33,7 +33,6 @@ func (f *FailedJob) Get() bool {
 func (f *FailedJob) Insert() error {
 	txn, err := pg.Begin()
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 
@@ -46,7 +45,6 @@ func (f *FailedJob) Insert() error {
 	s += "values($1,$2,$3, $4)"
 	_, err = txn.Exec(s, f.QueueId, f.JobId, f.Id, string(payload))
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 	fmt.Printf("measure=failed_jobs.insert id=%s\n", f.Id)
@@ -57,22 +55,14 @@ func (f *FailedJob) Insert() error {
 	s += "where jobs.id = $1"
 	rows, err := txn.Query(s, f.JobId)
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
-		return err
-	}
-	rows.Close()
-
-	rows, err = txn.Query("select update_error_counter($1)", f.QueueId)
-	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
 	rows.Close()
 
 	err = txn.Commit()
 	if err != nil {
-		fmt.Printf("at=error error=%s\n", err)
 		return err
 	}
+	go Record(errorEvent, f.QueueId, f.JobId)
 	return nil
 }

@@ -5,6 +5,7 @@ create table queues (
 	heroku_id text,
 	plan text,
 	callback_url text,
+	deleted_at timestamptz,
 	in_minute bigint default 0,
 	in_hour bigint default 0,
 	in_day bigint default 0,
@@ -37,11 +38,12 @@ create table failed_jobs (
 	created_at timestamptz default now()
 );
 
-create table queue_stats (
+create table metabolism_reports (
+	id bigserial,
+	time timestamptz default now(),
 	queue uuid,
-	action text,
-	bucket text,
-	ts timestamptz
+	job uuid,
+	action int
 );
 
 commit;
