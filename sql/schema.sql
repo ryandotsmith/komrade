@@ -46,4 +46,6 @@ create table metabolism_reports (
 	action int
 );
 
+create index metabolism_by_queue_and_time on metabolism_reports(queue, time);
+
 commit;

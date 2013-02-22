@@ -73,25 +73,25 @@ func router(w http.ResponseWriter, r *http.Request) {
 func handleHeartBeat(w http.ResponseWriter, r *http.Request) {
 	token, err := ParseToken(r)
 	if err != nil {
-		writeJsonErr(w, 401, err)
+		WriteJsonErr(w, 401, err)
 		return
 	}
 
 	matches := heartPat.FindStringSubmatch(r.URL.Path)
 	if len(matches) != 2 {
-		writeJsonErr(w, 400, errors.New("Missing job id or failured id."))
+		WriteJsonErr(w, 400, errors.New("Missing job id or failured id."))
 		return
 	}
 	id := string(matches[1])
 	if len(id) == 0 {
-		writeJsonErr(w, 400, errors.New("Job id not found."))
+		WriteJsonErr(w, 400, errors.New("Job id not found."))
 		return
 	}
 
 	job := store.Job{Id: id, QueueId: token}
 	err = job.HeartBeat()
 	if err != nil {
-		writeJsonErr(w, 500, errors.New("Unable to commit heartbeat."))
+		WriteJsonErr(w, 500, errors.New("Unable to commit heartbeat."))
 		return
 	}
 	WriteJson(w, 201, map[string]string{"message": "OK"})
@@ -100,13 +100,13 @@ func handleHeartBeat(w http.ResponseWriter, r *http.Request) {
 func handleDeleteAll(w http.ResponseWriter, r *http.Request) {
 	token, err := ParseToken(r)
 	if err != nil {
-		writeJsonErr(w, 401, err)
+		WriteJsonErr(w, 401, err)
 		return
 	}
 
 	jobCount, err := store.DeleteAllJobs(token)
 	if err != nil {
-		writeJsonErr(w, 500, err)
+		WriteJsonErr(w, 500, err)
 	}
 
 	WriteJson(w, 200, map[string]int64{"deleted": jobCount})
@@ -115,29 +115,29 @@ func handleDeleteAll(w http.ResponseWriter, r *http.Request) {
 func handleFailedJob(w http.ResponseWriter, r *http.Request) {
 	token, err := ParseToken(r)
 	if err != nil {
-		writeJsonErr(w, 401, err)
+		WriteJsonErr(w, 401, err)
 		return
 	}
 
 	matches := failPat.FindStringSubmatch(r.URL.Path)
 	if len(matches) < 3 {
-		writeJsonErr(w, 400, errors.New("Missing job id or failured id."))
+		WriteJsonErr(w, 400, errors.New("Missing job id or failured id."))
 		return
 	}
 	jid := string(matches[1])
 	fid := string(matches[2])
 	if len(jid) == 0 {
-		writeJsonErr(w, 400, errors.New("Job id not found."))
+		WriteJsonErr(w, 400, errors.New("Job id not found."))
 		return
 	}
 	if len(fid) == 0 {
-		writeJsonErr(w, 400, errors.New("Failure id not found."))
+		WriteJsonErr(w, 400, errors.New("Failure id not found."))
 		return
 	}
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		writeJsonErr(w, 500, err)
+		WriteJsonErr(w, 500, err)
 		return
 	}
 
@@ -150,13 +150,13 @@ func handleFailedJob(w http.ResponseWriter, r *http.Request) {
 
 	err = json.Unmarshal(b, &f.Payload)
 	if err != nil {
-		writeJsonErr(w, 400, err)
+		WriteJsonErr(w, 400, err)
 		return
 	}
 
 	err = f.Insert()
 	if err != nil {
-		writeJsonErr(w, 500, err)
+		WriteJsonErr(w, 500, err)
 		return
 	}
 	WriteJson(w, 201, f)
@@ -165,32 +165,32 @@ func handleFailedJob(w http.ResponseWriter, r *http.Request) {
 func handleNewJob(w http.ResponseWriter, r *http.Request) {
 	token, err := ParseToken(r)
 	if err != nil {
-		writeJsonErr(w, 401, err)
+		WriteJsonErr(w, 401, err)
 		return
 	}
 
 	matches := jobPat.FindStringSubmatch(r.URL.Path)
 	if len(matches) < 2 || len(matches[1]) == 0 {
-		writeJsonErr(w, 400, errors.New("Job id not found."))
+		WriteJsonErr(w, 400, errors.New("Job id not found."))
 		return
 	}
 	// Trim the forward slash that came from the url path.
 	id := string(matches[1][1:])
 	if len(id) == 0 {
-		writeJsonErr(w, 400, errors.New("Job id not found."))
+		WriteJsonErr(w, 400, errors.New("Job id not found."))
 		return
 	}
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		writeJsonErr(w, 500, err)
+		WriteJsonErr(w, 500, err)
 		return
 	}
 
 	j := store.Job{Id: id, QueueId: token}
 	err = json.Unmarshal(b, &j.Payload)
 	if err != nil {
-		writeJsonErr(w, 400, err)
+		WriteJsonErr(w, 400, err)
 		return
 	}
 
@@ -201,7 +201,7 @@ func handleNewJob(w http.ResponseWriter, r *http.Request) {
 
 	err = j.Insert()
 	if err != nil {
-		writeJsonErr(w, 500, err)
+		WriteJsonErr(w, 500, err)
 		return
 	}
 	WriteJson(w, 201, j)
@@ -210,7 +210,7 @@ func handleNewJob(w http.ResponseWriter, r *http.Request) {
 func handleGetJob(w http.ResponseWriter, r *http.Request) {
 	token, err := ParseToken(r)
 	if err != nil {
-		writeJsonErr(w, 401, err)
+		WriteJsonErr(w, 401, err)
 		return
 	}
 
@@ -222,7 +222,7 @@ func handleGetJob(w http.ResponseWriter, r *http.Request) {
 
 	jobs, err := store.GetJobs(token, limit)
 	if err != nil {
-		writeJsonErr(w, 500, err)
+		WriteJsonErr(w, 500, err)
 		return
 	}
 	WriteJson(w, 200, jobs)
@@ -231,24 +231,24 @@ func handleGetJob(w http.ResponseWriter, r *http.Request) {
 func handleDeleteJob(w http.ResponseWriter, r *http.Request) {
 	token, err := ParseToken(r)
 	if err != nil {
-		writeJsonErr(w, 401, err)
+		WriteJsonErr(w, 401, err)
 		return
 	}
 
 	matches := jobPat.FindStringSubmatch(r.URL.Path)
 	if len(matches) < 2 || len(matches[1]) == 0 {
-		writeJsonErr(w, 400, errors.New("Job id not found."))
+		WriteJsonErr(w, 400, errors.New("Job id not found."))
 		return
 	}
 	// Trim the forward slash that came from the url path.
 	id := string(matches[1][1:])
 	if len(id) == 0 {
-		writeJsonErr(w, 400, errors.New("Job id not found."))
+		WriteJsonErr(w, 400, errors.New("Job id not found."))
 		return
 	}
 	job := store.Job{Id: id, QueueId: token}
 	if err := job.Delete(); err != nil {
-		writeJsonErr(w, 400, err)
+		WriteJsonErr(w, 400, err)
 		return
 	}
 	WriteJson(w, 200, job)
@@ -257,7 +257,7 @@ func handleDeleteJob(w http.ResponseWriter, r *http.Request) {
 func WriteJson(w http.ResponseWriter, status int, data interface{}) {
 	b, err := json.Marshal(data)
 	if err != nil {
-		writeJsonErr(w, 500, err)
+		WriteJsonErr(w, 500, err)
 	} else {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(status)
@@ -266,7 +266,7 @@ func WriteJson(w http.ResponseWriter, status int, data interface{}) {
 	}
 }
 
-func writeJsonErr(w http.ResponseWriter, status int, err error) {
+func WriteJsonErr(w http.ResponseWriter, status int, err error) {
 	fmt.Println("error:", err)
 	WriteJson(w, status, map[string]string{"message": "Internal server error"})
 }
