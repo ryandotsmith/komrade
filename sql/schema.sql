@@ -5,16 +5,7 @@ create table queues (
 	heroku_id text,
 	plan text,
 	callback_url text,
-	deleted_at timestamptz,
-	in_minute bigint default 0,
-	in_hour bigint default 0,
-	in_day bigint default 0,
-	out_minute bigint default 0,
-	out_hour bigint default 0,
-	out_day bigint default 0,
-	error_minute bigint default 0,
-	error_hour bigint default 0,
-	error_day bigint default 0
+	deleted_at timestamptz
 );
 
 create table jobs (
@@ -23,9 +14,9 @@ create table jobs (
 	payload json,
 	created_at timestamptz default now(),
 	locked_at timestamptz,
+	failed_count int default 0,
 	heartbeat timestamptz,
-	heartbeat_count int default 0,
-	failed_count int default 0
+	heartbeat_count int default 0
 );
 
 create index jobs_by_queue on jobs (queue);
