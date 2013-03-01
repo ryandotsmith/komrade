@@ -1,8 +1,6 @@
 package store
 
-import (
-	"fmt"
-)
+import "fmt"
 
 const (
 	enqueueEvent = 0
