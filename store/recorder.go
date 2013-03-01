@@ -12,13 +12,13 @@ const (
 func Record(event int, queueId, jobId string) {
 	var err error
 	if len(jobId) == 0 {
-		s := "insert into metabolism_reports (queue, action) "
+		s := "insert into stat_raw (queue, action) "
 		s += "values ($1,$2)"
-		_, err = pg.Exec(s, queueId, event)
+		_, err = statsPg.Exec(s, queueId, event)
 	} else {
-		s := "insert into metabolism_reports (queue, job, action) "
+		s := "insert into stat_raw (queue, job, action) "
 		s += "values ($1,$2,$3)"
-		_, err = pg.Exec(s, queueId, jobId, event)
+		_, err = statsPg.Exec(s, queueId, jobId, event)
 	}
 	if err != nil {
 		fmt.Printf("measure=%q error=%s event=%d queue=%s\n",
