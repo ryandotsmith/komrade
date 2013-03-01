@@ -11,21 +11,27 @@ var (
 	pg *sql.DB
 )
 
+func parseUrl(name string) string {
+	var tmp string
+	var err error
+
+	tmp = os.Getenv(name)
+	if len(tmp) == 0 {
+		fmt.Printf("at=error error=\"must set %s\"\n", name)
+		os.Exit(1)
+	}
+
+	tmp, err = pq.ParseURL(tmp)
+	if err != nil {
+		fmt.Printf("at=error error=\"unable to parse %s\"\n", name)
+		os.Exit(1)
+	}
+	return tmp
+}
+
 func init() {
 	var err error
-	url := os.Getenv("DATABASE_URL")
-	if len(url) == 0 {
-		fmt.Printf("at=error error=\"must set DATABASE_URL\"\n")
-		os.Exit(1)
-	}
-
-	pgurl, err := pq.ParseURL(url)
-	if err != nil {
-		fmt.Printf("at=error error=\"unable to parse DATABASE_URL\"\n")
-		os.Exit(1)
-	}
-
-	pg, err = sql.Open("postgres", pgurl)
+	pg, err = sql.Open("postgres", parseUrl("DATABASE_URL"))
 	if err != nil {
 		fmt.Printf("error=%s\n", err)
 		os.Exit(1)
