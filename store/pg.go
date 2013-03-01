@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/bmizerany/pq"
+	"log"
 	"os"
 )
 
 var (
-	pg *sql.DB
+	pg      *sql.DB
+	statsPg *sql.DB
 )
 
 func parseUrl(name string) string {
@@ -31,9 +33,14 @@ func parseUrl(name string) string {
 
 func init() {
 	var err error
+
 	pg, err = sql.Open("postgres", parseUrl("DATABASE_URL"))
 	if err != nil {
-		fmt.Printf("error=%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
+	}
+
+	statsPg, err = sql.Open("postgres", parseUrl("STATS_DATABASE_URL"))
+	if err != nil {
+		log.Fatal(err)
 	}
 }
