@@ -6,10 +6,11 @@ import (
 )
 
 type FailedJob struct {
-	Id      string                 `json:"id"`
-	JobId   string                 `json:"job_id"`
-	QueueId string                 `json:"queue_id"`
-	Payload map[string]interface{} `json:"payload"`
+	Id         string                 `json:"id"`
+	Payload    map[string]interface{} `json:"payload"`
+	QueueId    string                 `json:"queue_id"`
+	JobId      string                 `json:"job_id"`
+	JobPayload map[string]interface{} `json:"job_payload"`
 }
 
 func (f *FailedJob) Get() bool {
@@ -41,9 +42,15 @@ func (f *FailedJob) Insert() error {
 		return err
 	}
 
-	s := "insert into failed_jobs (queue, job_id, id, payload) "
+	jobPayload, err := json.Marshal(f.JobPayload)
+	if err != nil {
+		return err
+	}
+
+	s := "insert into failed_jobs (queue, job_id, job_payload, id, payload) "
 	s += "values($1,$2,$3, $4)"
-	_, err = txn.Exec(s, f.QueueId, f.JobId, f.Id, string(payload))
+	_, err = txn.Exec(s, f.QueueId, f.JobId, string(jobPayload),
+		f.Id, string(payload))
 	if err != nil {
 		return err
 	}

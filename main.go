@@ -154,6 +154,11 @@ func handleFailedJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	j := store.Job{Id: jid}
+	if ok := j.Get(); ok {
+		f.JobPayload = j.Payload
+	}
+
 	err = f.Insert()
 	if err != nil {
 		WriteJsonErr(w, 500, err)
