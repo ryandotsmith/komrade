@@ -48,7 +48,7 @@ func (f *FailedJob) Insert() error {
 	}
 
 	s := "insert into failed_jobs (queue, job_id, job_payload, id, payload) "
-	s += "values($1,$2,$3, $4)"
+	s += "values($1,$2,$3,$4,$5)"
 	_, err = txn.Exec(s, f.QueueId, f.JobId, string(jobPayload),
 		f.Id, string(payload))
 	if err != nil {
