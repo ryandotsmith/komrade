@@ -7,8 +7,8 @@ import (
 
 type FailedJob struct {
 	Id      string                 `json:"id"`
-	JobId   string                 `json:"id"`
-	QueueId string                 `json:"id"`
+	JobId   string                 `json:"job_id"`
+	QueueId string                 `json:"queue_id"`
 	Payload map[string]interface{} `json:"payload"`
 }
 
