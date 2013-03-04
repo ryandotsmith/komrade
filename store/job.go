@@ -79,8 +79,26 @@ func (j *Job) Insert() error {
 		return err
 	}
 
+	tx, err := pg.Begin()
+	if err != nil {
+		return err
+	}
+
 	s := "insert into jobs (queue, id, payload) values ($1,$2,$3)"
-	_, err = pg.Exec(s, j.QueueId, j.Id, string(payload))
+	_, err = tx.Exec(s, j.QueueId, j.Id, string(payload))
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	s = "update queues set length = length + 1 where token = $1"
+	_, err = tx.Exec(s, j.QueueId)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
 	if err != nil {
 		return err
 	}
@@ -104,8 +122,26 @@ func (j *Job) HeartBeat() error {
 }
 
 func (j *Job) Delete() error {
+	tx, err := pg.Begin()
+	if err != nil {
+		return err
+	}
+
 	s := "delete from jobs where id = $1 returning payload"
-	rows, err := pg.Query(s, j.Id)
+	rows, err := tx.Query(s, j.Id)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	s = "update queues set length = length - 1 where token = $1"
+	_, err = tx.Exec(s, j.QueueId)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
 	if err != nil {
 		return err
 	}
