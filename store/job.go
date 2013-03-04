@@ -11,7 +11,7 @@ type Job struct {
 	QueueId   string                 `json:",omitempty"`
 	CreatedAt time.Time              `json:"created_at"`
 	LockedAt  time.Time              `json:"locked_at"`
-	Payload   map[string]interface{} `json:"payload"`
+	Payload   map[string]interface{} `json:"payload,omitempty"`
 }
 
 func DeleteAllJobs(queueId string) (int64, error) {
@@ -127,8 +127,8 @@ func (j *Job) Delete() error {
 		return err
 	}
 
-	s := "delete from jobs where id = $1 returning payload"
-	rows, err := tx.Query(s, j.Id)
+	s := "delete from jobs where id = $1"
+	_, err = tx.Exec(s, j.Id)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -147,25 +147,6 @@ func (j *Job) Delete() error {
 	}
 
 	fmt.Printf("measure=jobs.delete id=%s\n", j.Id)
-	// If we weren't able to delete the job, it must already have been deleted.
-	present := rows.Next()
-	if !present {
-		rows.Close()
-		return nil
-	}
-
-	var tmp []byte
-	if err = rows.Scan(&tmp); err != nil {
-		rows.Close()
-		return err
-	}
-	// We are no done with the result of the delete.
-	rows.Close()
-
-	if err = json.Unmarshal(tmp, &j.Payload); err != nil {
-		return err
-	}
-
 	go Record(deleteEvent, j.QueueId, j.Id)
 	return nil
 }
